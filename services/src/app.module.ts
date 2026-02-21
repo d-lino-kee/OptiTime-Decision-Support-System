@@ -1,0 +1,11 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from './config/config.module';
+import { HealthModule } from './health/health.module';
+import { MongoModule } from './integrations/mongo/mongo.module';
+import { RedisModule } from './integrations/redis/redis.module';
+import { WeaviateModule } from './integrations/weaviate/weaviate.module';
+import { JobsModule } from './jobs/jobs.module';
+import { UsersModule } from './users/users.module';
+import { TasksModule } from './tasks/tasks.module';
+import { ReflectionsModule } from './reflections/reflections.module';
+import { SessionsModule } from './sessions/sessions.module';
