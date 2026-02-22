@@ -1,0 +1,51 @@
+# dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# builds
+dist/
+build/
+.out/
+.next/
+coverage/
+
+# env
+.env
+.env.* 
+!.env.example
+
+# logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+
+# caches
+.turbo/
+.cache/
+.eslintcache
+*.tsbuildinfo
+
+# mobile
+**/Pods/
+**/*.xcworkspace
+**/*.xcodeproj/xcuserdata/
+**/.gradle/
+**/build/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# weaviate local volumes (if you use docker compose)
+weaviate-data/
+mongo-data/
+redis-data/

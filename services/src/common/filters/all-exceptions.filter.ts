@@ -22,7 +22,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
             statusCode: status,
             path: req?.url,
             method: req?.method,
-            ..(typeof payload === 'string' ? { message: payload } : payload),
+            ...(typeof payload === 'string' ? { message: payload } : payload),
             timestamp: new Date().toISOString(),
             requestId: req?.requestId,
         })

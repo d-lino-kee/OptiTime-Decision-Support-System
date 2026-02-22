@@ -19,9 +19,14 @@ export class UsersController {
         return this.users.findOne(id);
     }
 
-    @patch(':id')
+    @Patch(':id')
     update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
         return this.users.update(id, dto);
+    }
+
+    @Delete(':id')
+    remove(@Param('id') id: string) {
+        return this.users.remove(id);
     }
 }
 

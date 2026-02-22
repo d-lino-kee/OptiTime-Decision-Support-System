@@ -9,3 +9,19 @@ import { UsersModule } from './users/users.module';
 import { TasksModule } from './tasks/tasks.module';
 import { ReflectionsModule } from './reflections/reflections.module';
 import { SessionsModule } from './sessions/sessions.module';
+
+@Module({
+  imports: [
+    ConfigModule,
+    MongoModule,
+    RedisModule,
+    WeaviateModule,
+    JobsModule,
+    HealthModule,
+    UsersModule,
+    TasksModule,
+    ReflectionsModule,
+    SessionsModule,
+  ],
+})
+export class AppModule {}
