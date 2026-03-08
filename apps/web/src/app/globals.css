@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+/* Optional: define CSS variables for theming */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    color-scheme: dark;
+  }
+}
+
+/* Use plain CSS for base body styling */
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* If you want Tailwind utilities applied globally, do it with normal classes
+   by wrapping your app in layout.tsx (recommended), rather than @apply.
+   But @apply still works if PostCSS is configured correctly. */
