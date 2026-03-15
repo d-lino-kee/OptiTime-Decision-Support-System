@@ -1,7 +1,7 @@
 import 'reflect-metadata';
-import { NestFactor } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
-import { DocumentBuilder, SwaggerModule } from '@/nestjs/swagger';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor';
@@ -11,7 +11,7 @@ async function bootstrap() {
 
     app.use(helmet());
     app.useGlobalFilters(new AllExceptionsFilter());
-    app.useGlaobalInterceptors(new RequestIdInterceptor());
+    app.useGlobalInterceptors(new RequestIdInterceptor());
     app.setGlobalPrefix('v1');
 
     const swaggerConfig = new DocumentBuilder()

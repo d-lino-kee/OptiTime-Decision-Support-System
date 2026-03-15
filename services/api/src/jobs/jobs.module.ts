@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { BullModule } from '@nestjs/bull';
+import { BullModule } from '@nestjs/bullmq';
 import { AppConfigService } from '../config/config.service';
 import { QUEUES } from './queues';
 import { JobsService } from './jobs.service';
@@ -8,7 +8,7 @@ import { JobsService } from './jobs.service';
     imports: [
         BullModule.forRootAsync({
             inject: [AppConfigService],
-            useFactor: (cfg: AppConfigService) => ({
+            useFactory: (cfg: AppConfigService) => ({
                 connection: { url: cfg.redisUrl },
             }),
         }),

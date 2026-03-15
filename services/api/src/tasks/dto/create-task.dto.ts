@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { isArray, isEnum, isMongoId, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import { IsArray, IsEnum, IsMongoId, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
 
 const priority = ['low', 'medium', 'high'] as const;
 const difficulty = ['easy', 'medium', 'hard'] as const;
@@ -7,25 +7,25 @@ const type = ['study', 'work', 'health', 'personal', 'other'] as const;
 
 export class CreateTaskDto {
     @ApiProperty()
-    @isMongoId()
+    @IsMongoId()
     userId!: string;
 
-    @ApiProperty({ exmaple: 'Finish calculus assignment' })
+    @ApiProperty({ example: 'Finish calculus assignment' })
     @IsString()
     @MinLength(2)
     title!: string;
 
     @ApiProperty({ enum: priority })
-    @isEnum(priority)
+    @IsEnum(priority)
     priority!: (typeof priority)[number];
 
     @ApiProperty({ enum: difficulty })
-    @isEnum(difficulty)
+    @IsEnum(difficulty)
     difficulty!: (typeof difficulty)[number];
 
     @ApiProperty({ enum: type })
-    @isEnum(type)
-    type!: (typeof type)[number]
+    @IsEnum(type)
+    type!: (typeof type)[number];
 
     @ApiProperty({ required: false })
     @IsOptional()
@@ -36,8 +36,8 @@ export class CreateTaskDto {
     @Min(1)
     estimatedMinutes!: number;
 
-    @ApiProperty({ required: false, type: [string] })
+    @ApiProperty({ required: false, type: [String] })
     @IsOptional()
-    @isArray()
+    @IsArray()
     tags?: string[];
 }
