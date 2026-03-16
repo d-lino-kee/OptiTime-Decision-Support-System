@@ -1,36 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { UserIdBar, getSavedUserId } from "@/components/UserIdBar";
+import { useAuth } from "@/context/AuthContext";
 import { reflectionsApi, type Reflection } from "@/lib/api";
 
 export default function ReflectionsPage() {
-  const [userId, setUserId] = useState("");
+  const { user } = useAuth();
   const [text, setText] = useState("");
   const [items, setItems] = useState<Reflection[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const id = getSavedUserId();
-    setUserId(id);
-    if (id) refresh(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (user) refresh();
+  }, [user]);
 
-  async function refresh(id = userId) {
-    if (!id) return;
+  async function refresh() {
     setLoading(true);
     try {
-      setItems(await reflectionsApi.listByUser(id));
+      setItems(await reflectionsApi.list());
     } finally {
       setLoading(false);
     }
   }
 
   async function add() {
-    if (!userId) return alert("Set a userId first.");
     if (text.trim().length < 3) return alert("Write a longer reflection.");
-    await reflectionsApi.create({ userId, text: text.trim() });
+    await reflectionsApi.create({ text: text.trim() });
     setText("");
     await refresh();
   }
@@ -42,8 +37,6 @@ export default function ReflectionsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <UserIdBar />
-
       <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="flex items-end justify-between gap-3">
           <div>
@@ -53,11 +46,10 @@ export default function ReflectionsPage() {
               These will power sentiment analysis + weekly summaries in the AI service.
             </p>
           </div>
-          <button className="rounded-xl border border-zinc-200 px-4 py-2 text-sm hover:bg-zinc-50" onClick={() => refresh()}>
+          <button className="rounded-xl border border-zinc-200 px-4 py-2 text-sm hover:bg-zinc-50" onClick={refresh}>
             {loading ? "Loading…" : "Refresh"}
           </button>
         </div>
-
         <textarea
           className="mt-4 w-full rounded-2xl border border-zinc-200 p-3 text-sm outline-none focus:ring-2 focus:ring-zinc-900"
           placeholder="How did today go?"
@@ -77,7 +69,21 @@ export default function ReflectionsPage() {
             <div key={r._id} className="rounded-2xl border border-zinc-200 p-4">
               <div className="text-sm text-zinc-700">{r.text}</div>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500">
-                <span>{r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}</span>
+                <div className="flex items-center gap-2">
+                  <span>{r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}</span>
+                  {r.sentimentLabel && (
+                    <span className={`rounded-full px-2 py-0.5 font-medium capitalize ${
+                      r.sentimentLabel === "positive"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : r.sentimentLabel === "negative"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}>
+                      {r.sentimentLabel}
+                      {r.sentimentScore != null && ` · ${Math.round(r.sentimentScore * 100)}%`}
+                    </span>
+                  )}
+                </div>
                 <button className="rounded-lg border border-zinc-200 px-2 py-1 hover:bg-zinc-50" onClick={() => remove(r._id)}>
                   Delete
                 </button>

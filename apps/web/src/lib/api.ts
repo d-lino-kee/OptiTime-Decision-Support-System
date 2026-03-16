@@ -1,10 +1,17 @@
 const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/v1";
-    
+
 type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
+
+let _getToken: (() => Promise<string | null>) | null = null;
+
+export function setTokenGetter(fn: () => Promise<string | null>) {
+    _getToken = fn;
+}
 
 export type User = {
     _id: string;
+    firebaseUid: string;
     displayName: string;
     email: string;
     createdAt?: string;
@@ -60,13 +67,15 @@ async function http<T>(
         body?: unknown;
         headers?: Record<string, string>;
     }
-) : Promise<T> {
+): Promise<T> {
     const method = opts?.method ?? "GET";
+    const token = await _getToken?.();
 
     const res = await fetch(`${API_BASE}${path}`, {
         method,
         headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
             ...(opts?.headers ?? {}),
         },
         body: opts?.body !== undefined ? JSON.stringify(opts.body) : undefined,
@@ -74,25 +83,26 @@ async function http<T>(
     });
 
     if (!res.ok) {
-        // Nest error response can be JSON; fall back to text
         const text = await res.text().catch(() => "");
         throw new Error(
-            `API error ${res.status}: ${text || res.statusText} on ${method} ${path}: ${
-            text || "(no body)"
-            }`
+            `API error ${res.status}: ${text || res.statusText} on ${method} ${path}`
         );
     }
 
-    // DELETE often returns { ok: true }, still JSON
     return (await res.json()) as T;
 }
 
-//** Health */
+/** Health */
 export const healthApi = {
     ping: () => http<{ ok: boolean; service: string; timestamp: string }>("/health"),
 };
 
-//** Users */
+/** Auth */
+export const authApi = {
+    me: () => http<User>("/auth/me"),
+};
+
+/** Users */
 export const usersApi = {
     list: () => http<User[]>("/users"),
     get: (id: string) => http<User>(`/users/${encodeURIComponent(id)}`),
@@ -106,118 +116,96 @@ export const usersApi = {
 
 /** Tasks */
 export const tasksApi = {
-  listByUser: (userId: string) =>
-    http<Task[]>(`/tasks?userId=${encodeURIComponent(userId)}`),
+    list: () => http<Task[]>("/tasks"),
 
-  get: (id: string) => http<Task>(`/tasks/${encodeURIComponent(id)}`),
+    get: (id: string) => http<Task>(`/tasks/${encodeURIComponent(id)}`),
 
-  create: (body: {
-    userId: string;
-    title: string;
-    notes?: string;
-    priority: TaskPriority;
-    difficulty: TaskDifficulty;
-    type: TaskType;
-    dueAt?: string;
-    estimatedMinutes: number;
-    tags?: string[];
-  }) =>
-    http<Task>("/tasks", {
-      method: "POST",
-      body: { ...body, tags: body.tags ?? [] },
-    }),
+    create: (body: {
+        title: string;
+        notes?: string;
+        priority: TaskPriority;
+        difficulty: TaskDifficulty;
+        type: TaskType;
+        dueAt?: string;
+        estimatedMinutes: number;
+        tags?: string[];
+    }) =>
+        http<Task>("/tasks", {
+            method: "POST",
+            body: { ...body, tags: body.tags ?? [] },
+        }),
 
-  update: (
-    id: string,
-    body: Partial<{
-      userId: string;
-      title: string;
-      notes?: string;
-      priority: TaskPriority;
-      difficulty: TaskDifficulty;
-      type: TaskType;
-      dueAt?: string;
-      estimatedMinutes: number;
-      tags: string[];
-    }>
-  ) =>
-    http<Task>(`/tasks/${encodeURIComponent(id)}`, {
-      method: "PATCH",
-      body,
-    }),
+    update: (
+        id: string,
+        body: Partial<{
+            title: string;
+            notes?: string;
+            priority: TaskPriority;
+            difficulty: TaskDifficulty;
+            type: TaskType;
+            dueAt?: string;
+            estimatedMinutes: number;
+            tags: string[];
+        }>
+    ) =>
+        http<Task>(`/tasks/${encodeURIComponent(id)}`, { method: "PATCH", body }),
 
-  remove: (id: string) =>
-    http<{ ok: true }>(`/tasks/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    remove: (id: string) =>
+        http<{ ok: true }>(`/tasks/${encodeURIComponent(id)}`, { method: "DELETE" }),
 };
 
 /** Reflections */
 export const reflectionsApi = {
-  listByUser: (userId: string) =>
-    http<Reflection[]>(`/reflections?userId=${encodeURIComponent(userId)}`),
+    list: () => http<Reflection[]>("/reflections"),
 
-  get: (id: string) => http<Reflection>(`/reflections/${encodeURIComponent(id)}`),
+    get: (id: string) => http<Reflection>(`/reflections/${encodeURIComponent(id)}`),
 
-  create: (body: { userId: string; text: string }) =>
-    http<Reflection>("/reflections", { method: "POST", body }),
+    create: (body: { text: string }) =>
+        http<Reflection>("/reflections", { method: "POST", body }),
 
-  update: (id: string, body: Partial<{ userId: string; text: string }>) =>
-    http<Reflection>(`/reflections/${encodeURIComponent(id)}`, {
-      method: "PATCH",
-      body,
-    }),
+    update: (id: string, body: Partial<{ text: string }>) =>
+        http<Reflection>(`/reflections/${encodeURIComponent(id)}`, { method: "PATCH", body }),
 
-  remove: (id: string) =>
-    http<{ ok: true }>(`/reflections/${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    }),
+    remove: (id: string) =>
+        http<{ ok: true }>(`/reflections/${encodeURIComponent(id)}`, { method: "DELETE" }),
 };
 
 /** Focus sessions */
 export const sessionsApi = {
-  listByUser: (userId: string) =>
-    http<FocusSession[]>(`/sessions?userId=${encodeURIComponent(userId)}`),
+    list: () => http<FocusSession[]>("/sessions"),
 
-  get: (id: string) => http<FocusSession>(`/sessions/${encodeURIComponent(id)}`),
+    get: (id: string) => http<FocusSession>(`/sessions/${encodeURIComponent(id)}`),
 
-  create: (body: {
-    userId: string;
-    taskId?: string;
-    startedAt: string; // ISO string
-    endedAt?: string; // ISO string
-    interruptions?: number;
-    notes?: string;
-  }) =>
-    http<FocusSession>("/sessions", {
-      method: "POST",
-      body: { ...body, interruptions: body.interruptions ?? 0 },
-    }),
+    create: (body: {
+        taskId?: string;
+        startedAt: string;
+        endedAt?: string;
+        interruptions?: number;
+        notes?: string;
+    }) =>
+        http<FocusSession>("/sessions", {
+            method: "POST",
+            body: { ...body, interruptions: body.interruptions ?? 0 },
+        }),
 
-  update: (
-    id: string,
-    body: Partial<{
-      userId: string;
-      taskId?: string;
-      startedAt: string;
-      endedAt?: string;
-      interruptions: number;
-      notes?: string;
-    }>
-  ) =>
-    http<FocusSession>(`/sessions/${encodeURIComponent(id)}`, {
-      method: "PATCH",
-      body,
-    }),
+    update: (
+        id: string,
+        body: Partial<{
+            taskId?: string;
+            startedAt: string;
+            endedAt?: string;
+            interruptions: number;
+            notes?: string;
+        }>
+    ) =>
+        http<FocusSession>(`/sessions/${encodeURIComponent(id)}`, { method: "PATCH", body }),
 
-  remove: (id: string) =>
-    http<{ ok: true }>(`/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    remove: (id: string) =>
+        http<{ ok: true }>(`/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
 };
 
-/**
- * Chatbot (placeholder)
- * NOTE: Your NestJS API does not have /chat yet.
- * Once you add POST /v1/chat, this will work.
- */
+/** Chat */
 export const chatApi = {
-  send: (body: { userId: string; message: string }) =>
-    http<{ reply: string }>("/chat", { method: "POST", body }),
+    send: (body: { message: string }) =>
+        http<{ reply: string }>("/chat", { method: "POST", body }),
 };

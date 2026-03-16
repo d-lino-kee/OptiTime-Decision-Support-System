@@ -1,19 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { UserIdBar, getSavedUserId } from "@/components/UserIdBar";
 import { tasksApi, type Task } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 const defaults = {
   priority: "medium" as const,
   difficulty: "medium" as const,
   type: "study" as const,
   estimatedMinutes: 30,
-  tags: [] as string[],
 };
 
 export default function TasksPage() {
-  const [userId, setUserId] = useState("");
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -26,66 +25,48 @@ export default function TasksPage() {
   const [tags, setTags] = useState<string>("");
 
   useEffect(() => {
-    const id = getSavedUserId();
-    setUserId(id);
-    if (id) refresh(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (user) refresh();
+  }, [user]);
 
-  async function refresh(id = userId) {
-    if (!id) return;
+  async function refresh() {
     setLoading(true);
     try {
-      const data = await tasksApi.listByUser(id);
-      setTasks(data);
+      setTasks(await tasksApi.list());
     } finally {
       setLoading(false);
     }
   }
 
-  const stats = useMemo(() => {
-    const total = tasks.length;
-    const mins = tasks.reduce((a, t) => a + (t.estimatedMinutes ?? 0), 0);
-    return { total, mins };
-  }, [tasks]);
+  const stats = useMemo(() => ({
+    total: tasks.length,
+    mins: tasks.reduce((a, t) => a + (t.estimatedMinutes ?? 0), 0),
+  }), [tasks]);
 
   async function createTask() {
-    if (!userId) return alert("Set a userId first.");
     if (!title.trim()) return alert("Title is required.");
-
     await tasksApi.create({
-        userId,
-        title: title.trim(),
-        notes: notes.trim() || undefined,
-        priority,
-        difficulty,
-        type,
-        estimatedMinutes,
-        tags: tags
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean)
+      title: title.trim(),
+      notes: notes.trim() || undefined,
+      priority,
+      difficulty,
+      type,
+      estimatedMinutes,
+      tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
     });
-
-    // Reset form
     setTitle("");
     setNotes("");
     setTags("");
     setEstimatedMinutes(defaults.estimatedMinutes);
-
-    await refresh(userId);
-    }
-
+    await refresh();
+  }
 
   async function deleteTask(id: string) {
     await tasksApi.remove(id);
-    await refresh(userId);
+    await refresh();
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <UserIdBar />
-
       <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -98,7 +79,7 @@ export default function TasksPage() {
           </div>
           <button
             className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium hover:bg-zinc-50"
-            onClick={() => refresh()}
+            onClick={refresh}
           >
             {loading ? "Loading…" : "Refresh"}
           </button>
@@ -118,12 +99,11 @@ export default function TasksPage() {
             onChange={(e) => setTags(e.target.value)}
           />
           <textarea
-            className="md:col-span-2 rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-900"
+            className="rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-900 md:col-span-2"
             placeholder="Notes (optional)"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
-
           <div className="grid grid-cols-2 gap-3 md:col-span-2 md:grid-cols-4">
             <select className="rounded-xl border border-zinc-200 px-3 py-2 text-sm" value={priority} onChange={(e) => setPriority(e.target.value as Task["priority"])}>
               <option value="low">Priority: Low</option>
@@ -151,9 +131,8 @@ export default function TasksPage() {
               placeholder="Est. minutes"
             />
           </div>
-
           <button
-            className="md:col-span-2 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+            className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 md:col-span-2"
             onClick={createTask}
           >
             Add Task
@@ -164,7 +143,6 @@ export default function TasksPage() {
       <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="text-sm text-zinc-500">List</div>
         <div className="mt-1 text-lg font-semibold">Your tasks</div>
-
         <div className="mt-4 grid grid-cols-1 gap-3">
           {tasks.map((t) => (
             <div key={t._id} className="rounded-2xl border border-zinc-200 p-4">
@@ -174,21 +152,16 @@ export default function TasksPage() {
                   <div className="mt-1 text-xs text-zinc-500">
                     {t.type.toUpperCase()} • {t.priority.toUpperCase()} • {t.difficulty.toUpperCase()} • {t.estimatedMinutes} min
                   </div>
-                  {t.notes ? <div className="mt-2 text-sm text-zinc-700">{t.notes}</div> : null}
+                  {t.notes && <div className="mt-2 text-sm text-zinc-700">{t.notes}</div>}
                   {t.tags?.length ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {t.tags.map((tag) => (
-                        <span key={tag} className="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700">
-                          {tag}
-                        </span>
+                        <span key={tag} className="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700">{tag}</span>
                       ))}
                     </div>
                   ) : null}
                 </div>
-                <button
-                  className="rounded-xl border border-zinc-200 px-3 py-2 text-sm hover:bg-zinc-50"
-                  onClick={() => deleteTask(t._id)}
-                >
+                <button className="rounded-xl border border-zinc-200 px-3 py-2 text-sm hover:bg-zinc-50" onClick={() => deleteTask(t._id)}>
                   Delete
                 </button>
               </div>
