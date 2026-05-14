@@ -34,13 +34,13 @@ export class JobsService implements OnModuleInit {
     await this.weeklySummaryQueue.add(
       JOB_NAMES.WEEKLY_SUMMARY,
       { triggerType: 'cron' },
-      { repeat: { pattern: '0 23 * * 0' }, jobId: 'cron:weekly-summary' },
+      { repeat: { pattern: '0 23 * * 0' }, jobId: 'cron-weekly-summary' },
     );
 
     await this.personalizationQueue.add(
       JOB_NAMES.PERSONALIZATION_UPDATE,
       { triggerType: 'cron' },
-      { repeat: { pattern: '0 3 * * *' }, jobId: 'cron:personalization-update' },
+      { repeat: { pattern: '0 3 * * *' }, jobId: 'cron-personalization-update' },
     );
 
     this.logger.log('Repeating jobs registered');
@@ -49,14 +49,14 @@ export class JobsService implements OnModuleInit {
   async enqueueSentiment(payload: SentimentPayload): Promise<void> {
     await this.sentimentQueue.add(JOB_NAMES.SENTIMENT_SINGLE, payload, {
       ...DEFAULT_JOB_OPTIONS,
-      jobId: `sentiment:${payload.reflectionId}`,
+      jobId: `sentiment-${payload.reflectionId}`,
     });
   }
 
   async enqueueEmbedUserData(payload: EmbedPayload): Promise<void> {
     await this.embeddingsQueue.add(JOB_NAMES.EMBED_USER_DATA, payload, {
       ...DEFAULT_JOB_OPTIONS,
-      jobId: `embed:${payload.source}:${payload.sourceId}`,
+      jobId: `embed-${payload.source}-${payload.sourceId}`,
     });
   }
 
@@ -68,7 +68,7 @@ export class JobsService implements OnModuleInit {
     };
     await this.weeklySummaryQueue.add(JOB_NAMES.WEEKLY_SUMMARY, payload, {
       ...DEFAULT_JOB_OPTIONS,
-      jobId: `weekly-summary:${userId}:${weekStart.toISOString()}`,
+      jobId: `weekly-summary-${userId}-${weekStart.toISOString().replace(/[:.]/g, '-')}`,
     });
   }
 
@@ -76,7 +76,7 @@ export class JobsService implements OnModuleInit {
     const payload: PersonalizationUpdatePayload = { userId, triggeredBy: 'manual' };
     await this.personalizationQueue.add(JOB_NAMES.PERSONALIZATION_UPDATE, payload, {
       ...DEFAULT_JOB_OPTIONS,
-      jobId: `personalization:${userId}:manual`,
+      jobId: `personalization-${userId}-manual`,
     });
   }
 }

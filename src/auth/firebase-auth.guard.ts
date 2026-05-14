@@ -2,6 +2,7 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -12,6 +13,8 @@ import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
+  private readonly logger = new Logger(FirebaseAuthGuard.name);
+
   constructor(
     private readonly reflector: Reflector,
     private readonly usersService: UsersService,
@@ -40,7 +43,10 @@ export class FirebaseAuthGuard implements CanActivate {
       );
       (req as any).user = user;
       return true;
-    } catch {
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`verifyIdToken failed: code=${code ?? 'n/a'} message=${message}`);
       throw new UnauthorizedException('Invalid or expired token');
     }
   }

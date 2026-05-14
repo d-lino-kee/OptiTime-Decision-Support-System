@@ -1,3 +1,8 @@
+// Must run before anything else so env vars like NODE_TLS_REJECT_UNAUTHORIZED and
+// GOOGLE_APPLICATION_CREDENTIALS are visible by the time TLS / firebase-admin
+// modules initialize. NestJS ConfigModule loads dotenv too, but that happens after
+// these other modules have been imported.
+import 'dotenv/config';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
