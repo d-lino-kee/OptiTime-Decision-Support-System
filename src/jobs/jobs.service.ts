@@ -1,6 +1,9 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
+import { InjectModel } from '@nestjs/mongoose';
 import { Queue } from 'bullmq';
+import { Model } from 'mongoose';
+import { Reflection, ReflectionDocument } from '../reflections/schemas/reflection.schema';
 import {
   QUEUE_NAMES,
   JOB_NAMES,
@@ -24,10 +27,30 @@ export class JobsService implements OnModuleInit {
     private readonly sentimentQueue: Queue,
     @InjectQueue(QUEUE_NAMES.EMBEDDINGS)
     private readonly embeddingsQueue: Queue,
+    @InjectModel(Reflection.name)
+    private readonly reflectionModel: Model<ReflectionDocument>,
   ) {}
 
   async onModuleInit() {
     await this.registerRepeatingJobs();
+    await this.backfillMissingSentiment();
+  }
+
+  private async backfillMissingSentiment() {
+    const pending = await this.reflectionModel
+      .find({ sentimentLabel: { $exists: false } })
+      .select('_id userId')
+      .lean();
+
+    if (!pending.length) return;
+
+    this.logger.log(`Backfilling sentiment + embeddings for ${pending.length} reflection(s)`);
+    for (const r of pending) {
+      const userId = String(r.userId);
+      const reflectionId = String(r._id);
+      await this.enqueueSentiment({ userId, reflectionId });
+      await this.enqueueEmbedUserData({ userId, source: 'reflection', sourceId: reflectionId });
+    }
   }
 
   private async registerRepeatingJobs() {
