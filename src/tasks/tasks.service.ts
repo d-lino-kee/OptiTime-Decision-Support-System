@@ -41,11 +41,12 @@ export class TasksService {
   }
 
   async update(id: string, dto: UpdateTaskDto, userId: string) {
-    const updated = await this.taskModel.findByIdAndUpdate(
-      id,
-      { ...dto, dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined },
-      { new: true },
-    ).lean();
+    const update: Record<string, unknown> = { ...dto };
+    if (dto.dueAt !== undefined) update.dueAt = new Date(dto.dueAt);
+
+    const updated = await this.taskModel
+      .findByIdAndUpdate(id, { $set: update }, { new: true })
+      .lean();
 
     if (!updated) throw new NotFoundException('Task not found');
 

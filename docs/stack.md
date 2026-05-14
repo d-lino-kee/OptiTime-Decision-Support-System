@@ -1,137 +1,65 @@
+# OptiTime Stack
 
----
+Why each piece is in the box.
 
-## `docs/stack.md`
-```markdown
-# OptiTime Stack Documentation
+## Web — Next.js 16 + Tailwind v4
 
-This document explains the technology choices for OptiTime and how each component fits together.
+- App Router, React 19, React Compiler enabled.
+- Tailwind v4 with the PostCSS plugin (no `@apply` overuse — utilities in JSX).
+- Firebase JS SDK for email/password auth. ID tokens flow to the API via a
+  token-getter wired into `lib/api.ts`.
+- Path alias `@/*` → `src/*`.
 
-## 1) Frontends
+## API — NestJS 10
 
-### Web: Next.js + Tailwind CSS
-**Why**
-- Production-grade React framework with routing, server components, and great DX
-- Tailwind enables fast iteration and a modern “portfolio-ready” design system
+- Modular structure: one module per domain (`tasks`, `sessions`, `reflections`,
+  `chat`, `users`, `auth`, `health`, `jobs`).
+- DTOs in `dto/`, schemas in `schemas/`, services + controllers per module.
+- Global `ValidationPipe` (`whitelist`, `forbidNonWhitelisted`, transform on)
+  enforces `class-validator` decorators on every body.
+- Global `AllExceptionsFilter` shapes error responses + injects request id.
+- Firebase Admin SDK verifies bearer tokens in `FirebaseAuthGuard` (set as the
+  app-wide `APP_GUARD`). Public routes opt out via `@Public()`.
+- Swagger UI at `/docs` reads `@ApiTags` / `@ApiBearerAuth` / `@ApiProperty`.
 
-**Responsibilities**
-- UI for tasks, schedule, analytics dashboards, and chatbot
-- Calls backend API via typed client (shared DTOs in `packages/shared`)
+## Data — MongoDB + Mongoose
 
-### Mobile: Native iOS (Swift/SwiftUI) + Android (Kotlin/Jetpack Compose)
-**Why**
-- Demonstrates real native engineering skills (not only cross-platform frameworks)
-- SwiftUI + Compose produce modern, fluid UIs and are great for polished demos
+- One collection per domain object. `userId`-prefixed compound indexes on the
+  most common sort key.
+- DTOs and Mongoose schemas live next to their modules; no shared "models"
+  bag — each module owns its data shape.
 
-**Responsibilities**
-- Mobile-first task capture and focus sessions
-- Offline-first patterns where helpful (optional)
-- Uses the same API contract as the web client
+## Queues — Redis + BullMQ
 
----
+- Four queues: `embeddings`, `sentiment`, `summaries`, `personalization`.
+- Producers live in `src/jobs/jobs.service.ts`; cron-style repeats are
+  registered with `repeat: { pattern }` on boot.
+- Workers (`src/jobs/processors/*.ts`) extend `WorkerHost` and are wired in
+  the same module so a single `pnpm start:dev` runs producer + consumer.
+- Default job options: 3 attempts with exponential backoff,
+  `removeOnComplete: 100`, `removeOnFail: 50`.
 
-## 2) Backend API: NestJS (TypeScript)
+## AI — FastAPI + (optional) Weaviate + Transformers
 
-**Why**
-- Strong modular architecture (controllers/services/modules)
-- Dependency injection and patterns commonly used in industry
-- Works well with job queues and scalable service design
+- Endpoints: `/sentiment`, `/embed`, `/chat`, `/weekly-summary`, `/health`.
+- All requests verified via HMAC-SHA256 (`X-OptiTime-Timestamp` +
+  `X-OptiTime-Signature`).
+- Two execution modes: a deterministic lightweight mode that works on any
+  laptop with no model downloads, and a real-model mode that pulls
+  HuggingFace + Weaviate. The HTTP contract is identical so the NestJS side
+  doesn't change.
 
-**Responsibilities**
-- Auth/session management (pluggable)
-- CRUD for tasks, schedules, focus sessions, reflections
-- Analytics endpoints (weekly stats, streaks, distributions)
-- Enqueues background work into BullMQ (Redis)
-- Server-to-server calls to AI service (FastAPI)
+## Auth — Firebase
 
----
+- The web app handles sign-up / sign-in / token refresh.
+- The API trusts Firebase Admin's `verifyIdToken` and find-or-creates a Mongo
+  user keyed by `firebaseUid`.
+- Service-to-service is HMAC, not Firebase — no AI service in the auth tree.
 
-## 3) Datastores
+## Deployment
 
-### MongoDB (system of record)
-**Why**
-- Flexible document model fits tasks/reflections/sessions well
-- Easy iteration as the schema evolves
-- Great for event-style collections (activity logs)
-
-**What it stores**
-- Users
-- Tasks + schedules
-- Focus sessions
-- Reflections/check-ins
-- AI outputs (sentiment scores, summaries, recommendation snapshots)
-
-### Weaviate (vector database)
-**Why**
-- Purpose-built semantic retrieval: “ask about my week”
-- Supports long-term memory for chatbot (embeddings + metadata filters)
-
-**What it stores**
-- Embedded chunks of user data (reflections, session notes, task summaries)
-- Metadata for filtering (userId, date range, type, source)
-
----
-
-## 4) AI/ML Service: FastAPI (Python)
-
-**Why**
-- Python ecosystem is ideal for NLP/ML workflows
-- Isolating AI from the main API is a real-world architecture pattern
-
-**AI capabilities**
-1. **Sentiment analysis**
-   - Produces sentiment score/label/confidence for reflections/check-ins
-2. **Common-sense question flow**
-   - A state-machine-like flow to ask practical coaching questions
-3. **Personalization engine**
-   - Generates recommendations (e.g., “schedule deep work earlier”)
-4. **RAG over user data**
-   - Retrieves relevant chunks from Weaviate and generates grounded responses
-5. **Weekly review**
-   - Summarizes patterns, mood trends, and productivity insights
-
-**Deployment**
-- Dockerized FastAPI service deployed to Railway
-
----
-
-## 5) Background Jobs: Redis + BullMQ
-
-**Why**
-- Keeps API fast and responsive
-- Job-driven architecture demonstrates production thinking
-
-**Jobs (examples)**
-- `embed_user_data`: create embeddings and upsert into Weaviate
-- `weekly_summary`: generate weekly review and store in MongoDB
-- `sentiment_batch`: batch analyze reflections for sentiment
-- `personalization_update`: refresh user recommendation model
-
----
-
-## 6) Deployment: Railway
-
-**Why**
-- Simple, modern PaaS for multi-service deployments
-- Easy env var management and logs per service
-
-**Services**
-- `api` (NestJS)
-- `ai` (FastAPI, Docker)
-- `worker` (BullMQ worker, Node/TS)
-- `redis` (Railway-managed)
-- MongoDB typically via MongoDB Atlas (recommended)
-- Weaviate via Weaviate Cloud or container deployment
-
----
-
-## 7) Security Model (recommended baseline)
-- Service-to-service authentication between API and AI (HMAC or JWT)
-- Strict user-scoped data access in MongoDB queries
-- Weaviate queries always filtered by `userId` metadata
-
----
-
-## 8) Observability (recommended)
-- Structured logs in API/AI/Worker
-- Error tracking (Sentry) and request tracing (OpenTelemetry) as a stretch goal
+- `docker-compose.dev.yml` runs Mongo, Redis, Weaviate, and the AI service
+  for local dev.
+- API and web run on the host during development for fast HMR.
+- Production target is Railway (or any container host): one container per
+  service, plus managed Mongo (Atlas), Redis, and Weaviate Cloud.

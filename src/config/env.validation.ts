@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const envSchema = z.object({
-  NODE_ENV: z.string().default('development'),
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(3001),
 
   MONGODB_URI: z.string().min(1),
@@ -9,10 +9,11 @@ export const envSchema = z.object({
 
   REDIS_URL: z.string().min(1),
 
-  AI_SERVICE_URL: z.string().min(1).default('http://localhost:8001'),
-  WEAVIATE_URL: z.string().min(1).default('http://localhost:8080'),
+  AI_SERVICE_URL: z.string().min(1).default('http://localhost:8000'),
+  AI_SERVICE_HMAC_SECRET: z.string().min(1).default('dev_ai_hmac_change_me'),
 
-  SERVICE_AUTH_SECRET: z.string().min(1).default('dev_secret_change_me'),
+  WEAVIATE_URL: z.string().min(1).default('http://localhost:8080'),
+  WEAVIATE_API_KEY: z.string().optional(),
 
   FIREBASE_PROJECT_ID: z.string().min(1),
 });

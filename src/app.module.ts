@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AppConfigModule } from './config/config.module';
 import { AuthModule } from './auth/auth.module';
+import { ChatModule } from './chat/chat.module';
 import { HealthModule } from './health/health.module';
+import { AiModule } from './integrations/ai/ai.module';
 import { MongoModule } from './integrations/mongo/mongo.module';
-import { RedisModule } from './integrations/redis/redis.module';
-import { WeaviateModule } from './integrations/weaviate/weaviate.module';
 import { JobsModule } from './jobs/jobs.module';
 import { UsersModule } from './users/users.module';
 import { TasksModule } from './tasks/tasks.module';
@@ -15,8 +15,7 @@ import { SessionsModule } from './sessions/sessions.module';
   imports: [
     AppConfigModule,
     MongoModule,
-    RedisModule,
-    WeaviateModule,
+    AiModule,
     JobsModule,
     AuthModule,
     HealthModule,
@@ -24,6 +23,7 @@ import { SessionsModule } from './sessions/sessions.module';
     TasksModule,
     ReflectionsModule,
     SessionsModule,
+    ChatModule,
   ],
 })
 export class AppModule {}

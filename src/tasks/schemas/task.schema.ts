@@ -24,6 +24,9 @@ export class Task {
     @Prop({ required: true, enum: ['easy', 'medium', 'hard']})
     difficulty!: TaskDifficulty;
 
+    @Prop({ required: true, enum: ['study', 'work', 'health', 'personal', 'other'] })
+    type!: TaskType;
+
     @Prop()
     dueAt?: Date;
 

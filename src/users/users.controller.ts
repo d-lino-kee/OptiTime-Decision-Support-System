@@ -1,32 +1,23 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
-import { CreateUserDto } from './dto/create-user.dto';
+import { Body, Controller, Get, Patch } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ReqUser, RequestUser } from '../common/decorators/req-user.decorator';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 
 @ApiTags('users')
+@ApiBearerAuth()
 @Controller('users')
 export class UsersController {
     constructor(private readonly users: UsersService) {}
 
-    @Post()
-    create(@Body() dto: CreateUserDto) {
-        return this.users.create(dto);
+    @Get('me')
+    me(@ReqUser() user: RequestUser) {
+        return this.users.findOne(user._id.toString());
     }
 
-    @Get(':id')
-    findOne(@Param('id') id : string) {
-        return this.users.findOne(id);
-    }
-
-    @Patch(':id')
-    update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-        return this.users.update(id, dto);
-    }
-
-    @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.users.remove(id);
+    @Patch('me')
+    updateMe(@ReqUser() user: RequestUser, @Body() dto: UpdateUserDto) {
+        return this.users.update(user._id.toString(), dto);
     }
 }
 

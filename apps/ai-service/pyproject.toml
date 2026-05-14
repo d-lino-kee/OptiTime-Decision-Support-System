@@ -1,0 +1,24 @@
+[project]
+name = "optitime-ai-service"
+version = "0.1.0"
+description = "OptiTime AI service — sentiment, embeddings, RAG chat, weekly summaries."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.5.0",
+    "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+ml = [
+    "transformers>=4.45.0",
+    "torch>=2.4.0",
+    "sentence-transformers>=3.1.0",
+    "weaviate-client>=4.9.0",
+]
+
+[tool.uvicorn]
+host = "0.0.0.0"
+port = 8000

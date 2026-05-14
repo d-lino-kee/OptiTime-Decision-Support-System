@@ -1,5 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import {
+    IsArray,
+    IsEnum,
+    IsISO8601,
+    IsNumber,
+    IsOptional,
+    IsString,
+    Min,
+    MinLength,
+} from 'class-validator';
 
 const priority = ['low', 'medium', 'high'] as const;
 const difficulty = ['easy', 'medium', 'hard'] as const;
@@ -10,6 +19,11 @@ export class CreateTaskDto {
     @IsString()
     @MinLength(2)
     title!: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    notes?: string;
 
     @ApiProperty({ enum: priority })
     @IsEnum(priority)
@@ -25,6 +39,7 @@ export class CreateTaskDto {
 
     @ApiProperty({ required: false })
     @IsOptional()
+    @IsISO8601()
     dueAt?: string;
 
     @ApiProperty({ default: 30 })
@@ -35,5 +50,6 @@ export class CreateTaskDto {
     @ApiProperty({ required: false, type: [String] })
     @IsOptional()
     @IsArray()
+    @IsString({ each: true })
     tags?: string[];
 }

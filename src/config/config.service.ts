@@ -25,18 +25,6 @@ export class AppConfigService {
     return this.config.getOrThrow<string>('REDIS_URL');
   }
 
-  get redisHost(): string {
-    return this.config.getOrThrow<string>('REDIS_HOST');
-  }
-
-  get redisPort(): number {
-    return this.config.get<number>('REDIS_PORT', 6379);
-  }
-
-  get redisPassword(): string | undefined {
-    return this.config.get<string>('REDIS_PASSWORD');
-  }
-
   get weaviateUrl(): string {
     return this.config.getOrThrow<string>('WEAVIATE_URL');
   }
@@ -51,14 +39,6 @@ export class AppConfigService {
 
   get aiServiceHmacSecret(): string {
     return this.config.getOrThrow<string>('AI_SERVICE_HMAC_SECRET');
-  }
-
-  get jwtSecret(): string {
-    return this.config.getOrThrow<string>('JWT_SECRET');
-  }
-
-  get jwtExpiry(): string {
-    return this.config.get<string>('JWT_EXPIRY', '7d');
   }
 
   get firebaseProjectId(): string {

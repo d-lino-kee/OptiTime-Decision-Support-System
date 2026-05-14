@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OptiTime Web
 
-## Getting Started
+Next.js 16 + Tailwind v4 + Firebase Auth client for the OptiTime API.
 
-First, run the development server:
+## Pages
+
+- `/login` — email/password sign-in & sign-up (Firebase)
+- `/` — dashboard with task / reflection / focus-session summary
+- `/tasks` — create + browse + delete tasks
+- `/sessions` — log focus sessions, see history with duration
+- `/reflections` — write reflections, see sentiment results once the worker runs
+- `/chat` — AI coach (proxied through NestJS to the FastAPI sidecar)
+
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+cd apps/web
+cp .env.local.example .env.local   # then fill in Firebase web config
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000>. The NestJS API is expected at
+`NEXT_PUBLIC_API_BASE_URL` (defaults to `http://localhost:3001/v1`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Auth flow
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The `AuthContext` mounts `onAuthStateChanged`, calls `getIdToken()` on demand, and
+hands the token to `lib/api.ts` so every request to the NestJS API carries
+`Authorization: Bearer <firebase-id-token>`. The API's `FirebaseAuthGuard`
+verifies the token, looks up (or creates) the corresponding Mongo user, and
+populates `req.user`.
 
-## Learn More
+## Build
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm build   # next build (turbopack)
+pnpm start   # serve the production build
+```

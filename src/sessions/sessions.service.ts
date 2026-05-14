@@ -31,16 +31,14 @@ export class SessionsService {
   }
 
   async update(id: string, dto: UpdateSessionDto) {
-    const updated = await this.model.findByIdAndUpdate(
-      id,
-      {
-        ...dto,
-        taskId: dto.taskId ? new Types.ObjectId(dto.taskId) : undefined,
-        startedAt: dto.startedAt ? new Date(dto.startedAt) : undefined,
-        endedAt: dto.endedAt ? new Date(dto.endedAt) : undefined,
-      },
-      { new: true },
-    ).lean();
+    const update: Record<string, unknown> = { ...dto };
+    if (dto.taskId !== undefined) update.taskId = new Types.ObjectId(dto.taskId);
+    if (dto.startedAt !== undefined) update.startedAt = new Date(dto.startedAt);
+    if (dto.endedAt !== undefined) update.endedAt = new Date(dto.endedAt);
+
+    const updated = await this.model
+      .findByIdAndUpdate(id, { $set: update }, { new: true })
+      .lean();
     if (!updated) throw new NotFoundException('Session not found');
     return updated;
   }
