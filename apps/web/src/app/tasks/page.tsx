@@ -16,6 +16,8 @@ export default function TasksPage() {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
@@ -47,26 +49,41 @@ export default function TasksPage() {
   );
 
   async function createTask() {
-    if (!title.trim()) return alert("Title is required.");
-    await tasksApi.create({
-      title: title.trim(),
-      notes: notes.trim() || undefined,
-      priority,
-      difficulty,
-      type,
-      estimatedMinutes,
-      tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
-    });
-    setTitle("");
-    setNotes("");
-    setTags("");
-    setEstimatedMinutes(defaults.estimatedMinutes);
-    await refresh();
+    setError(null);
+    if (!title.trim()) {
+      setError("Title is required.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await tasksApi.create({
+        title: title.trim(),
+        notes: notes.trim() || undefined,
+        priority,
+        difficulty,
+        type,
+        estimatedMinutes,
+        tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+      });
+      setTitle("");
+      setNotes("");
+      setTags("");
+      setEstimatedMinutes(defaults.estimatedMinutes);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create task.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function deleteTask(id: string) {
-    await tasksApi.remove(id);
-    await refresh();
+    try {
+      await tasksApi.remove(id);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete task.");
+    }
   }
 
   const priorityBadge = (p: Task["priority"]) => {
@@ -150,13 +167,20 @@ export default function TasksPage() {
             onChange={setEstimatedMinutes}
           />
 
+          {error && (
+            <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-inset ring-rose-200 md:col-span-2">
+              {error}
+            </p>
+          )}
+
           <button
             type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-emerald-600 to-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-500/20 transition hover:shadow-lg md:col-span-2"
+            disabled={saving}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-emerald-600 to-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-500/20 transition hover:shadow-lg disabled:opacity-60 md:col-span-2"
             onClick={createTask}
           >
             <Plus className="h-4 w-4" />
-            Add task
+            {saving ? "Adding…" : "Add task"}
           </button>
         </div>
       </div>

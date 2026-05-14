@@ -10,6 +10,8 @@ export default function ReflectionsPage() {
   const [text, setText] = useState("");
   const [items, setItems] = useState<Reflection[]>([]);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) refresh();
@@ -25,15 +27,30 @@ export default function ReflectionsPage() {
   }
 
   async function add() {
-    if (text.trim().length < 3) return alert("Write a longer reflection.");
-    await reflectionsApi.create({ text: text.trim() });
-    setText("");
-    await refresh();
+    setError(null);
+    if (text.trim().length < 3) {
+      setError("Write at least three characters before saving.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await reflectionsApi.create({ text: text.trim() });
+      setText("");
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save reflection.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function remove(id: string) {
-    await reflectionsApi.remove(id);
-    await refresh();
+    try {
+      await reflectionsApi.remove(id);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete reflection.");
+    }
   }
 
   const sentimentChip = (label?: string, score?: number) => {
@@ -83,14 +100,23 @@ export default function ReflectionsPage() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={4}
+          disabled={saving}
         />
+
+        {error && (
+          <p className="relative mt-3 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-inset ring-rose-200">
+            {error}
+          </p>
+        )}
+
         <button
           type="button"
-          className="relative mt-3 inline-flex items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition hover:shadow-lg"
+          disabled={saving}
+          className="relative mt-3 inline-flex items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition hover:shadow-lg disabled:opacity-60"
           onClick={add}
         >
           <Sparkles className="h-4 w-4" />
-          Save reflection
+          {saving ? "Saving…" : "Save reflection"}
         </button>
       </div>
 

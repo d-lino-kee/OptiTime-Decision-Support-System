@@ -9,6 +9,8 @@ export default function SessionsPage() {
   const { user } = useAuth();
   const [items, setItems] = useState<FocusSession[]>([]);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [startedAt, setStartedAt] = useState("");
   const [endedAt, setEndedAt] = useState("");
@@ -29,23 +31,38 @@ export default function SessionsPage() {
   }
 
   async function add() {
-    if (!startedAt) return alert("Start time required.");
-    await sessionsApi.create({
-      startedAt: new Date(startedAt).toISOString(),
-      endedAt: endedAt ? new Date(endedAt).toISOString() : undefined,
-      interruptions,
-      notes: notes.trim() || undefined,
-    });
-    setStartedAt("");
-    setEndedAt("");
-    setInterruptions(0);
-    setNotes("");
-    await refresh();
+    setError(null);
+    if (!startedAt) {
+      setError("Start time is required.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await sessionsApi.create({
+        startedAt: new Date(startedAt).toISOString(),
+        endedAt: endedAt ? new Date(endedAt).toISOString() : undefined,
+        interruptions,
+        notes: notes.trim() || undefined,
+      });
+      setStartedAt("");
+      setEndedAt("");
+      setInterruptions(0);
+      setNotes("");
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add session.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function remove(id: string) {
-    await sessionsApi.remove(id);
-    await refresh();
+    try {
+      await sessionsApi.remove(id);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete session.");
+    }
   }
 
   const stats = useMemo(() => {
@@ -91,13 +108,20 @@ export default function SessionsPage() {
           <DateField label="Ended (optional)" value={endedAt} onChange={setEndedAt} />
           <NumberField label="Interruptions" value={interruptions} onChange={setInterruptions} />
           <Field label="Notes" placeholder="How did it go?" value={notes} onChange={setNotes} />
+          {error && (
+            <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-inset ring-rose-200 md:col-span-2">
+              {error}
+            </p>
+          )}
+
           <button
             type="button"
             onClick={add}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-amber-500/20 transition hover:shadow-lg md:col-span-2"
+            disabled={saving}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-amber-500/20 transition hover:shadow-lg disabled:opacity-60 md:col-span-2"
           >
             <Plus className="h-4 w-4" />
-            Add session
+            {saving ? "Adding…" : "Add session"}
           </button>
         </div>
       </div>
